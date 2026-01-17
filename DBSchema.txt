@@ -1,0 +1,109 @@
+1️⃣ USER TABLE
+CREATE TABLE [User] (
+    UserId INT PRIMARY KEY IDENTITY(1,1),
+    Name VARCHAR(100) NOT NULL,
+    Email VARCHAR(150) UNIQUE NOT NULL,
+    PasswordHash VARCHAR(255) NOT NULL,
+    AgeGroup VARCHAR(50),
+    DietPreference VARCHAR(100)
+);
+
+
+2️⃣ RECIPE TABLE
+CREATE TABLE Recipe (
+    RecipeId INT PRIMARY KEY IDENTITY(1,1),
+    Title VARCHAR(150) NOT NULL,
+    Category VARCHAR(100),
+    Difficulty VARCHAR(50),
+    CookingTime INT,
+    IsVegan BIT DEFAULT 0,
+    IsGlutenFree BIT DEFAULT 0,
+    CreatedBy INT,
+    FOREIGN KEY (CreatedBy) REFERENCES [User](UserId)
+);
+
+
+
+3️⃣ INGREDIENT TABLE
+CREATE TABLE Ingredient (
+    IngredientId INT PRIMARY KEY IDENTITY(1,1),
+    Name VARCHAR(150) NOT NULL,
+    AllergyFlag BIT DEFAULT 0
+);
+
+
+
+4️⃣ RECIPE_INGREDIENTS TABLE (Many-to-Many)
+CREATE TABLE Recipe_Ingredients (
+    RecipeId INT,
+    IngredientId INT,
+    Quantity VARCHAR(50),
+    PRIMARY KEY (RecipeId, IngredientId),
+    FOREIGN KEY (RecipeId) REFERENCES Recipe(RecipeId),
+    FOREIGN KEY (IngredientId) REFERENCES Ingredient(IngredientId)
+);
+
+
+
+
+5️⃣ NUTRITION_INFO TABLE
+CREATE TABLE Nutrition_Info (
+    NutritionId INT PRIMARY KEY IDENTITY(1,1),
+    RecipeId INT UNIQUE,
+    Calories INT,
+    Protein INT,
+    Carbs INT,
+    Fats INT,
+    Sugar INT,
+    Fiber INT,
+    FOREIGN KEY (RecipeId) REFERENCES Recipe(RecipeId)
+);
+
+
+
+
+6️⃣ FAVORITE TABLE (User ↔ Recipe)
+CREATE TABLE Favorite (
+    UserId INT,
+    RecipeId INT,
+    PRIMARY KEY (UserId, RecipeId),
+    FOREIGN KEY (UserId) REFERENCES [User](UserId),
+    FOREIGN KEY (RecipeId) REFERENCES Recipe(RecipeId)
+);
+
+
+
+7️⃣ SHOPPING_LIST TABLE
+CREATE TABLE Shopping_List (
+    ShoppingListId INT PRIMARY KEY IDENTITY(1,1),
+    UserId INT,
+    RecipeId INT,
+    IngredientName VARCHAR(150),
+    Quantity VARCHAR(50),
+    FOREIGN KEY (UserId) REFERENCES [User](UserId),
+    FOREIGN KEY (RecipeId) REFERENCES Recipe(RecipeId)
+);
+
+
+8️⃣ REVIEW TABLE
+CREATE TABLE Review (
+    ReviewId INT PRIMARY KEY IDENTITY(1,1),
+    UserId INT,
+    RecipeId INT,
+    Rating INT CHECK (Rating BETWEEN 1 AND 5),
+    Comment VARCHAR(500),
+    ReviewDate DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (UserId) REFERENCES [User](UserId),
+    FOREIGN KEY (RecipeId) REFERENCES Recipe(RecipeId)
+);
+
+
+9️⃣ AI_SEARCH_HISTORY TABLE (Gen-AI)
+CREATE TABLE AI_Search_History (
+    SearchId INT PRIMARY KEY IDENTITY(1,1),
+    UserId INT,
+    UserQuery VARCHAR(500),
+    GeneratedSummary VARCHAR(1000),
+    SearchDate DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (UserId) REFERENCES [User](UserId)
+);
