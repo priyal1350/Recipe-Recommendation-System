@@ -29,7 +29,6 @@ namespace SmartRecipeFinder.API
                     });
 
             builder.Services.AddHttpClient<GenAIService>();
-            builder.Services.AddHttpClient<RecipeApiService>();
 
             builder.Services.AddControllers();
             builder.Services.AddOpenApi();
@@ -38,12 +37,20 @@ namespace SmartRecipeFinder.API
 
             // ? CORS for React
             builder.Services.AddCors(options =>
-            {
-                options.AddPolicy("AllowReact",
-                    policy => policy.WithOrigins("http://localhost:3000")
-                                    .AllowAnyMethod()
-                                    .AllowAnyHeader());
-            });
+{
+    options.AddPolicy("AllowReact", policy =>
+    {
+        policy.WithOrigins(
+            "http://localhost:3000",
+            "https://salmon-ground-0444a4500.azurestaticapps.net",
+            "https://salmon-ground-0444a4500.1.azurestaticapps.net"
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod();
+    });
+});
+
+
 
             // ?? JWT AUTH CONFIG
             var jwtKey = builder.Configuration["Jwt:Key"];
@@ -72,6 +79,17 @@ namespace SmartRecipeFinder.API
 
                         ClockSkew = TimeSpan.Zero // ?? important
                     };
+                    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            if (context.Request.Method == "OPTIONS")
+            {
+                context.NoResult();
+            }
+            return Task.CompletedTask;
+        }
+    };
                 });
 
             var app = builder.Build();
@@ -82,14 +100,17 @@ namespace SmartRecipeFinder.API
             }
 
             app.UseHttpsRedirection();
-            app.UseCors("AllowReact");
+            app.UseRouting();
 
-            app.UseAuthentication();
-            app.UseAuthorization();
+app.UseCors("AllowReact"); // ✅ must be after routing
 
-            app.MapControllers();
+app.UseAuthentication();
+app.UseAuthorization();
 
-            app.Run();
+app.MapControllers();
+
+app.Run();
+
         }
     }
 }
