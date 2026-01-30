@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState , useCallback } from "react";
 import api from "../api"; // ✅ use JWT axios instance
 import { useNavigate } from "react-router-dom";
 import AppLayout from "../layouts/AppLayout";
@@ -12,32 +12,31 @@ export default function FilteredRecipes() {
 
   const navigate = useNavigate();
 
-  const loadRecipes = async () => {
-    try {
-      setLoading(true);
+  const loadRecipes = useCallback(async () => {
+  try {
+    setLoading(true);
 
-      const params = new URLSearchParams();
+    const params = new URLSearchParams();
+    params.append("query", "healthy");
 
-      params.append("query", "healthy"); // ✅ default query
+    if (diet) params.append("diet", diet);
+    if (maxCalories) params.append("maxCalories", maxCalories);
+    if (minProtein) params.append("minProtein", minProtein);
 
-      if (diet) params.append("diet", diet);
-      if (maxCalories) params.append("maxCalories", maxCalories);
-      if (minProtein) params.append("minProtein", minProtein);
+    const res = await api.get(`/external/recipes/search?${params.toString()}`);
 
-      const res = await api.get(`/external/recipes/search?${params.toString()}`);
+    setRecipes(res.data.results || []);
+  } catch (err) {
+    console.error("❌ Failed to load filtered recipes:", err.response?.data || err.message);
+    alert("Failed to load recipes ❌");
+  } finally {
+    setLoading(false);
+  }
+}, [diet, maxCalories, minProtein]); // ✅ dependencies added
 
-      setRecipes(res.data.results || []);
-    } catch (err) {
-      console.error("❌ Failed to load filtered recipes:", err.response?.data || err.message);
-      alert("Failed to load recipes ❌");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadRecipes();
-  }, [diet, maxCalories, minProtein]);
+useEffect(() => {
+  loadRecipes();
+}, [loadRecipes]); // ✅ no ESLint error
 
   return (
     <AppLayout>
