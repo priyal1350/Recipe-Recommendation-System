@@ -1,8 +1,6 @@
 import { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
-
-const AUTH_API = "http://localhost:8081/api/auth"; // ✅ FIXED
+import { authApi } from "../services/api"; // ✅ use authApi
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -19,7 +17,8 @@ export default function Login() {
     try {
       setLoading(true);
 
-      const res = await axios.post(`${AUTH_API}/login`, {
+      // ✅ Call Spring Boot Auth API (Azure)
+      const res = await authApi.post("/auth/login", {
         email,
         password,
       });
@@ -30,6 +29,7 @@ export default function Login() {
       // ✅ Save user info
       localStorage.setItem("userName", res.data.name);
       localStorage.setItem("userEmail", res.data.email);
+      localStorage.setItem("userId", res.data.userId);
 
       alert("Login successful ✅");
       navigate("/");

@@ -1,10 +1,14 @@
 import axios from "axios";
 
+// ✅ Azure .NET API URL
+const API_BASE =
+  "https://flavorquest-recipefinder-a0gdbjckc6ckgach.centralindia-01.azurewebsites.net/api";
+
 const api = axios.create({
-  baseURL: "https://localhost:7060/api", // ✅ your .NET API base URL
+  baseURL: API_BASE,
 });
 
-// ✅ Automatically attach JWT token to every request
+// ✅ Automatically attach JWT token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");

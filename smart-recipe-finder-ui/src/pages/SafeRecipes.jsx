@@ -12,6 +12,8 @@ export default function SafeSearchRecipes() {
   const [loading, setLoading] = useState(false);
   const [nutrition, setNutrition] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
+  const [error, setError] = useState("");
+  const [showUnsafe, setShowUnsafe] = useState(false);
 
   const defaultFoods = [
     "paneer", "salad", "dal", "smoothie",
@@ -24,14 +26,24 @@ export default function SafeSearchRecipes() {
 
     try {
       setLoading(true);
+      setError("");
 
-      const res = await api.get(`/recipes/safe-search?query=${searchTerm}`);
+      const encoded = encodeURIComponent(searchTerm);
+
+      const res = await api.get(`/recipes/safe-search?query=${encoded}`);
 
       setSafeRecipes(res.data.safeRecipes || []);
       setUnsafeRecipes(res.data.unsafeRecipes || []);
     } catch (err) {
       console.error("Safe search failed:", err.response?.data || err.message);
-      alert("Safe search failed ❌");
+
+      if (err.response?.status === 401) {
+        alert("Session expired. Please login again.");
+        localStorage.clear();
+        window.location.href = "/login";
+      } else {
+        setError("Safe search failed ❌");
+      }
     } finally {
       setLoading(false);
     }
@@ -50,6 +62,7 @@ export default function SafeSearchRecipes() {
       setNutrition(res.data || null);
       setShowPopup(true);
     } catch (err) {
+      console.error("Nutrition error:", err.response?.data || err.message);
       alert("Failed to load nutrition ❌");
     }
   };
@@ -59,7 +72,8 @@ export default function SafeSearchRecipes() {
     try {
       await api.post(`/user/addFavorite?recipeId=${recipeId}`);
       alert("Added to favorites ❤️");
-    } catch {
+    } catch (err) {
+      console.error("Favorite error:", err.response?.data || err.message);
       alert("Failed to add favorite ❌");
     }
   };
@@ -81,10 +95,16 @@ export default function SafeSearchRecipes() {
           </button>
         </div>
 
+        {error && <p style={styles.error}>{error}</p>}
         {loading && <p>⏳ Loading...</p>}
 
         {/* ✅ SAFE RECIPES */}
         <h3 style={{ color: "green" }}>✅ Safe Recipes</h3>
+
+        {safeRecipes.length === 0 && !loading && (
+          <p>No safe recipes found.</p>
+        )}
+
         <div style={styles.grid}>
           {safeRecipes.map((recipe) => (
             <div
@@ -92,44 +112,88 @@ export default function SafeSearchRecipes() {
               style={{ ...styles.card, background: "#e8fff1" }}
               onClick={() => navigate(`/recipe/${recipe.id}`)}
             >
-              <img src={recipe.image} alt={recipe.title} style={styles.image} />
+              {recipe.image && (
+                <img src={recipe.image} alt={recipe.title} style={styles.image} />
+              )}
               <h4>{recipe.title}</h4>
 
               <div style={styles.cardButtons}>
-                <button onClick={(e) => { e.stopPropagation(); addFavorite(recipe.id); }}>❤️</button>
-                <button onClick={(e) => { e.stopPropagation(); getNutrition(recipe.id); }}>🧪</button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addFavorite(recipe.id);
+                  }}
+                >
+                  ❤️ Favorite
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    getNutrition(recipe.id);
+                  }}
+                >
+                  🧪 Nutrition
+                </button>
               </div>
             </div>
           ))}
         </div>
 
-        {/* ⚠️ UNSAFE RECIPES
-        <h3 style={{ color: "red", marginTop: "30px" }}>⚠️ Unsafe Recipes</h3>
-        <div style={styles.grid}>
-          {unsafeRecipes.map((recipe) => (
-            <div
-              key={recipe.id}
-              style={{ ...styles.card, background: "#ffe6e6" }}
+        {/* ⚠️ UNSAFE RECIPES TOGGLE */}
+        {unsafeRecipes.length > 0 && (
+          <div style={{ marginTop: "30px" }}>
+            <button
+              style={styles.toggleBtn}
+              onClick={() => setShowUnsafe(!showUnsafe)}
             >
-              <img src={recipe.image} alt={recipe.title} style={styles.image} />
-              <h4>{recipe.title}</h4>
-              <p style={{ color: "red" }}>
-                ❌ Danger: {recipe.dangerIngredients.join(", ")}
-              </p>
-            </div>
-          ))}
-        </div> */}
+              {showUnsafe ? "Hide Unsafe Recipes ❌" : "Show Unsafe Recipes ⚠️"}
+            </button>
+
+            {showUnsafe && (
+              <>
+                <h3 style={{ color: "red", marginTop: "15px" }}>
+                  ⚠️ Unsafe Recipes
+                </h3>
+
+                <div style={styles.grid}>
+                  {unsafeRecipes.map((recipe) => (
+                    <div
+                      key={recipe.id}
+                      style={{ ...styles.card, background: "#ffe6e6" }}
+                    >
+                      {recipe.image && (
+                        <img
+                          src={recipe.image}
+                          alt={recipe.title}
+                          style={styles.image}
+                        />
+                      )}
+                      <h4>{recipe.title}</h4>
+                      <p style={{ color: "red" }}>
+                        ❌ Danger: {(recipe.dangerIngredients || []).join(", ")}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {/* 🧪 POPUP */}
         {showPopup && (
           <div style={styles.popupOverlay} onClick={() => setShowPopup(false)}>
             <div style={styles.popup} onClick={(e) => e.stopPropagation()}>
               <h3>🧪 Nutrition Info</h3>
-              <p>🔥 Calories: {nutrition?.calories ?? "N/A"}</p>
-              <p>🥖 Carbs: {nutrition?.carbs ?? "N/A"}</p>
-              <p>🥑 Fat: {nutrition?.fat ?? "N/A"}</p>
-              <p>💪 Protein: {nutrition?.protein ?? "N/A"}</p>
-              <button onClick={() => setShowPopup(false)}>Close</button>
+
+              <p>🔥 Calories: {nutrition?.calories ?? nutrition?.Calories ?? "N/A"}</p>
+              <p>🥖 Carbs: {nutrition?.carbs ?? nutrition?.Carbs ?? "N/A"}</p>
+              <p>🥑 Fat: {nutrition?.fat ?? nutrition?.Fats ?? "N/A"}</p>
+              <p>💪 Protein: {nutrition?.protein ?? nutrition?.Protein ?? "N/A"}</p>
+
+              <button style={styles.closeBtn} onClick={() => setShowPopup(false)}>
+                Close
+              </button>
             </div>
           </div>
         )}
@@ -142,11 +206,61 @@ const styles = {
   wrapper: { padding: "20px", maxWidth: "1200px", margin: "auto" },
   searchBar: { display: "flex", gap: "10px", marginBottom: "20px" },
   input: { padding: "10px", flex: 1, borderRadius: "8px", border: "1px solid #ccc" },
-  searchBtn: { padding: "10px 18px", background: "#28a745", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" },
-  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "20px" },
-  card: { border: "1px solid #ddd", padding: "10px", borderRadius: "10px", cursor: "pointer", background: "#fff" },
-  image: { width: "100%", borderRadius: "8px" },
+  searchBtn: {
+    padding: "10px 18px",
+    background: "#28a745",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+  },
+  error: { color: "red", marginBottom: "10px" },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+    gap: "20px",
+  },
+  card: {
+    border: "1px solid #ddd",
+    padding: "12px",
+    borderRadius: "12px",
+    cursor: "pointer",
+    background: "#fff",
+    boxShadow: "0 6px 15px rgba(0,0,0,0.08)",
+    transition: "transform 0.2s ease",
+  },
+  image: { width: "100%", borderRadius: "10px", marginBottom: "8px" },
   cardButtons: { display: "flex", justifyContent: "space-between", marginTop: "10px" },
-  popupOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center" },
-  popup: { background: "#fff", padding: "20px", borderRadius: "12px", width: "300px", textAlign: "center" }
+  popupOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.55)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  popup: {
+    background: "#fff",
+    padding: "22px",
+    borderRadius: "14px",
+    width: "320px",
+    textAlign: "center",
+    boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
+  },
+  closeBtn: {
+    marginTop: "10px",
+    padding: "8px 16px",
+    borderRadius: "8px",
+    border: "none",
+    background: "#667eea",
+    color: "#fff",
+    cursor: "pointer",
+  },
+  toggleBtn: {
+    padding: "8px 14px",
+    borderRadius: "8px",
+    border: "1px solid #ccc",
+    background: "#fff",
+    cursor: "pointer",
+  },
 };

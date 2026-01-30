@@ -1,8 +1,6 @@
 import { useState } from "react";
-import axios from "axios";
+import api from "../api"; // ✅ use JWT axios instance
 import AppLayout from "../layouts/AppLayout";
-
-const API_BASE = "https://localhost:7060/api";
 
 export default function AiMealPlanner() {
   const [goal, setGoal] = useState("");
@@ -18,8 +16,8 @@ export default function AiMealPlanner() {
     try {
       setLoading(true);
 
-      const res = await axios.post(
-        `${API_BASE}/ai/mealplan`,
+      const res = await api.post(
+        `/ai/mealplan`,
         { goal },
         { headers: { "Content-Type": "application/json" } }
       );
@@ -30,7 +28,7 @@ export default function AiMealPlanner() {
       setPlan(text);
     } catch (err) {
       console.error("Error generating plan:", err.response?.data || err.message);
-      alert("Failed to generate meal plan");
+      alert("Failed to generate meal plan ❌ (check token or API)");
     } finally {
       setLoading(false);
     }

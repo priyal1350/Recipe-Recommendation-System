@@ -1,24 +1,32 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../api"; // ✅ JWT axios instance
 import AppLayout from "../layouts/AppLayout";
-
-const API_BASE = "https://localhost:7060/api";
 
 export default function RecipeDetails() {
   const { id } = useParams();
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const loadRecipe = async () => {
       try {
-        const res = await axios.get(
-          `${API_BASE}/external/recipes/${id}`
-        );
+        setLoading(true);
+        setError("");
+
+        const res = await api.get(`/external/recipes/${id}`);
         setRecipe(res.data);
       } catch (err) {
-        console.error("Details load failed:", err);
+        console.error("❌ Details load failed:", err.response?.data || err.message);
+
+        if (err.response?.status === 401) {
+          alert("Session expired. Please login again.");
+          localStorage.clear();
+          window.location.href = "/login";
+        } else {
+          setError("Failed to load recipe details ❌");
+        }
       } finally {
         setLoading(false);
       }
@@ -37,6 +45,16 @@ export default function RecipeDetails() {
     );
   }
 
+  if (error) {
+    return (
+      <AppLayout>
+        <p style={{ textAlign: "center", marginTop: "50px", color: "red" }}>
+          {error}
+        </p>
+      </AppLayout>
+    );
+  }
+
   if (!recipe) return null;
 
   return (
@@ -48,16 +66,18 @@ export default function RecipeDetails() {
         </div>
 
         {/* Image */}
-        <img
-          src={recipe.image}
-          alt={recipe.title}
-          style={styles.image}
-        />
+        {recipe.image && (
+          <img
+            src={recipe.image}
+            alt={recipe.title}
+            style={styles.image}
+          />
+        )}
 
         {/* Meta Info */}
         <div style={styles.meta}>
-          <span>⏱ {recipe.readyInMinutes} mins</span>
-          <span>🍽 {recipe.dishTypes?.[0] || "Recipe"}</span>
+          <span>⏱ {recipe.readyInMinutes || recipe.cookingTime || "N/A"} mins</span>
+          <span>🍽 {recipe.dishTypes?.[0] || recipe.category || "Recipe"}</span>
           <span>{recipe.vegan ? "🌱 Vegan" : "🥩 Non-Vegan"}</span>
           <span>
             {recipe.glutenFree ? "🚫 Gluten Free" : "🌾 Contains Gluten"}
@@ -68,8 +88,10 @@ export default function RecipeDetails() {
         <div style={styles.section}>
           <h3>🧺 Ingredients</h3>
           <ul style={styles.list}>
-            {recipe.extendedIngredients?.map((i) => (
-              <li key={i.id}>{i.original}</li>
+            {(recipe.extendedIngredients || recipe.ingredients || []).map((i, idx) => (
+              <li key={idx}>
+                {i.original || `${i.name} - ${i.quantity || ""}`}
+              </li>
             ))}
           </ul>
         </div>
@@ -77,10 +99,11 @@ export default function RecipeDetails() {
         {/* Instructions */}
         <div style={styles.section}>
           <h3>👨‍🍳 Instructions</h3>
-          <div
-            style={styles.instructions}
-            dangerouslySetInnerHTML={{ __html: recipe.instructions }}
-          />
+          <div style={styles.instructions}>
+            {recipe.instructions
+              ? recipe.instructions.replace(/<[^>]+>/g, "")
+              : "No instructions available."}
+          </div>
         </div>
       </div>
     </AppLayout>
@@ -134,5 +157,6 @@ const styles = {
   instructions: {
     lineHeight: "1.7",
     color: "#333",
+    whiteSpace: "pre-line",
   },
 };
