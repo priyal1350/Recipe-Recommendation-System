@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react"; // ✅ added useCallback
+import { useEffect, useState, useCallback } from "react";
 import api from "../api";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "../layouts/AppLayout";
@@ -19,16 +19,11 @@ export default function FilteredRecipes() {
       const params = new URLSearchParams();
       params.append("query", "healthy");
 
-    const res = await api.get(`/external/recipes/search?${params.toString()}`);
+      if (diet) params.append("diet", diet);
+      if (maxCalories) params.append("maxCalories", maxCalories);
+      if (minProtein) params.append("minProtein", minProtein);
 
-    setRecipes(res.data.results || []);
-  } catch (err) {
-    console.error("❌ Failed to load filtered recipes:", err.response?.data || err.message);
-    alert("Failed to load recipes ❌");
-  } finally {
-    setLoading(false);
-  }
-}, [diet, maxCalories, minProtein]); // ✅ dependencies added
+      const res = await api.get(`/external/recipes/search?${params.toString()}`);
 
       setRecipes(res.data.results || []);
     } catch (err) {
@@ -41,14 +36,13 @@ export default function FilteredRecipes() {
 
   useEffect(() => {
     loadRecipes();
-  }, [loadRecipes]); // ✅ ESLint satisfied
+  }, [loadRecipes]);
 
   return (
     <AppLayout>
       <div style={styles.wrapper}>
         <h2 style={styles.title}>🥗 Healthy Filtered Recipes</h2>
 
-        {/* Filters */}
         <div style={styles.filters}>
           <select style={styles.select} value={diet} onChange={(e) => setDiet(e.target.value)}>
             <option value="">All Recipes</option>
@@ -99,7 +93,6 @@ export default function FilteredRecipes() {
   );
 }
 
-
 const styles = {
   wrapper: {
     maxWidth: "1200px",
@@ -109,29 +102,24 @@ const styles = {
     borderRadius: "14px",
     boxShadow: "0 15px 35px rgba(0,0,0,0.15)",
   },
-
   title: {
     marginBottom: "20px",
     fontSize: "22px",
   },
-
   loading: {
     textAlign: "center",
     color: "#667eea",
   },
-
   empty: {
     textAlign: "center",
     color: "#777",
   },
-
   filters: {
     display: "flex",
     gap: "12px",
     flexWrap: "wrap",
     marginBottom: "25px",
   },
-
   select: {
     padding: "10px 12px",
     borderRadius: "8px",
@@ -139,28 +127,23 @@ const styles = {
     cursor: "pointer",
     fontSize: "14px",
   },
-
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
     gap: "18px",
   },
-
   card: {
     background: "#fff",
     padding: "10px",
     borderRadius: "12px",
     boxShadow: "0 8px 18px rgba(0,0,0,0.12)",
     cursor: "pointer",
-    transition: "transform 0.2s ease",
   },
-
   image: {
     width: "100%",
     borderRadius: "10px",
     marginBottom: "8px",
   },
-
   recipeTitle: {
     fontSize: "14px",
     fontWeight: "500",
