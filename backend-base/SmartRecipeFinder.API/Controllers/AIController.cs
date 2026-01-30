@@ -16,6 +16,20 @@ namespace SmartRecipeFinder.API.Controllers
             _httpClient = new HttpClient();
         }
 
+        [HttpGet("debug-key")]
+public IActionResult DebugKey()
+{
+    var spoonKey = _config["Spoonacular:ApiKey"];
+    var newsKey = _config["NewsApi:ApiKey"];
+
+    return Ok(new
+    {
+        SpoonacularKey = spoonKey,
+        NewsApiKey = newsKey
+    });
+}
+
+
         // GET: /api/ai/foodfact
         [HttpGet("foodfact")]
         public async Task<IActionResult> GetFoodFact()
