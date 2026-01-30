@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../api"; // ✅ JWT axios instance
+import api from "../api";
 import AppLayout from "../layouts/AppLayout";
+
+// ✅ Move outside component (IMPORTANT)
+const defaultFoods = [
+  "paneer", "salad", "dal", "smoothie",
+  "chicken", "rice", "tofu", "oats", "eggs"
+];
 
 export default function SearchRecipes() {
   const navigate = useNavigate();
@@ -12,21 +18,15 @@ export default function SearchRecipes() {
   const [nutrition, setNutrition] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
 
-  const defaultFoods = [
-    "paneer", "salad", "dal", "smoothie",
-    "chicken", "rice", "tofu", "oats", "eggs"
-  ];
-
-  // 🔍 API search (JWT not required but safe)
+  // 🔍 API search
   const searchRecipes = useCallback(async (searchTerm) => {
     if (!searchTerm?.trim()) return;
 
     try {
       setLoading(true);
 
-      const res = await api.get(
-        `/external/recipes/search?query=${searchTerm}`
-      );
+      const encoded = encodeURIComponent(searchTerm);
+      const res = await api.get(`/external/recipes/search?query=${encoded}`);
 
       setRecipes(res.data?.results || []);
     } catch (err) {
@@ -41,15 +41,12 @@ export default function SearchRecipes() {
   useEffect(() => {
     const randomFood = defaultFoods[Math.floor(Math.random() * defaultFoods.length)];
     searchRecipes(randomFood);
-  }, [searchRecipes]);
+  }, [searchRecipes]); // ✅ ESLint fixed
 
   // 🧪 Nutrition fetch
   const getNutrition = async (recipeId) => {
     try {
-      const res = await api.get(
-        `/external/recipes/${recipeId}/nutrition`
-      );
-
+      const res = await api.get(`/external/recipes/${recipeId}/nutrition`);
       setNutrition(res.data || null);
       setShowPopup(true);
     } catch (err) {
@@ -58,7 +55,7 @@ export default function SearchRecipes() {
     }
   };
 
-  // ❤️ Add Favorite (JWT-based)
+  // ❤️ Add Favorite
   const addFavorite = async (recipeId) => {
     try {
       await api.post(`/user/addFavorite?recipeId=${recipeId}`);
@@ -69,7 +66,7 @@ export default function SearchRecipes() {
     }
   };
 
-  // 🛒 Shopping list (JWT-based)
+  // 🛒 Shopping list
   const generateShoppingList = async (recipeId) => {
     try {
       await api.post(`/shopping/generate?recipeId=${recipeId}`);
@@ -107,7 +104,11 @@ export default function SearchRecipes() {
               style={styles.card}
               onClick={() => navigate(`/recipe/${recipe.id}`)}
             >
-              <img src={recipe.image} alt={recipe.title} style={styles.image} />
+              <img
+                src={recipe.image || "https://via.placeholder.com/300"}
+                alt={recipe.title}
+                style={styles.image}
+              />
               <h4>{recipe.title}</h4>
 
               <div style={styles.cardButtons}>
@@ -137,6 +138,7 @@ export default function SearchRecipes() {
     </AppLayout>
   );
 }
+
 
 const styles = {
   wrapper: {

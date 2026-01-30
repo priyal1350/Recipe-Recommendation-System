@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import api from "../api"; // ✅ use JWT axios instance
+import { useEffect, useState, useCallback } from "react"; // ✅ added useCallback
+import api from "../api";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "../layouts/AppLayout";
 
@@ -12,13 +12,12 @@ export default function FilteredRecipes() {
 
   const navigate = useNavigate();
 
-  const loadRecipes = async () => {
+  const loadRecipes = useCallback(async () => {
     try {
       setLoading(true);
 
       const params = new URLSearchParams();
-
-      params.append("query", "healthy"); // ✅ default query
+      params.append("query", "healthy");
 
       if (diet) params.append("diet", diet);
       if (maxCalories) params.append("maxCalories", maxCalories);
@@ -33,11 +32,11 @@ export default function FilteredRecipes() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [diet, maxCalories, minProtein]);
 
   useEffect(() => {
     loadRecipes();
-  }, [diet, maxCalories, minProtein]);
+  }, [loadRecipes]); // ✅ ESLint satisfied
 
   return (
     <AppLayout>
@@ -46,21 +45,21 @@ export default function FilteredRecipes() {
 
         {/* Filters */}
         <div style={styles.filters}>
-          <select style={styles.select} onChange={(e) => setDiet(e.target.value)}>
+          <select style={styles.select} value={diet} onChange={(e) => setDiet(e.target.value)}>
             <option value="">All Recipes</option>
             <option value="vegetarian">🥦 Vegetarian</option>
             <option value="vegan">🌱 Vegan</option>
             <option value="nonveg">🍗 Non-Veg</option>
           </select>
 
-          <select style={styles.select} onChange={(e) => setMaxCalories(e.target.value)}>
+          <select style={styles.select} value={maxCalories} onChange={(e) => setMaxCalories(e.target.value)}>
             <option value="">Calories</option>
             <option value="400">Under 400</option>
             <option value="600">Under 600</option>
             <option value="800">Under 800</option>
           </select>
 
-          <select style={styles.select} onChange={(e) => setMinProtein(e.target.value)}>
+          <select style={styles.select} value={minProtein} onChange={(e) => setMinProtein(e.target.value)}>
             <option value="">Protein</option>
             <option value="10">Medium Protein</option>
             <option value="20">High Protein</option>
@@ -68,15 +67,12 @@ export default function FilteredRecipes() {
           </select>
         </div>
 
-        {/* Loading */}
         {loading && <p style={styles.loading}>⏳ Loading recipes...</p>}
 
-        {/* Empty State */}
         {!loading && recipes.length === 0 && (
           <p style={styles.empty}>No recipes found 😔</p>
         )}
 
-        {/* Recipes */}
         <div style={styles.grid}>
           {recipes.map((recipe) => (
             <div
@@ -97,6 +93,7 @@ export default function FilteredRecipes() {
     </AppLayout>
   );
 }
+
 
 const styles = {
   wrapper: {
