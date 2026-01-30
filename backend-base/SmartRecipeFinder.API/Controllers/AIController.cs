@@ -8,13 +8,16 @@ namespace SmartRecipeFinder.API.Controllers
     public class AiController : ControllerBase
     {
         private readonly IConfiguration _config;
-        private readonly HttpClient _httpClient;
+private readonly HttpClient _httpClient;
 
-        public AiController(IConfiguration config)
-        {
-            _config = config;
-            _httpClient = new HttpClient();
-        }
+public AiController(IConfiguration config, IHttpClientFactory factory)
+{
+    _config = config;
+    _httpClient = factory.CreateClient();
+    _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
+    _httpClient.Timeout = TimeSpan.FromSeconds(10);
+}
+
 
         [HttpGet("debug-key")]
 public IActionResult DebugKey()
@@ -32,15 +35,33 @@ public IActionResult DebugKey()
 
         // GET: /api/ai/foodfact
         [HttpGet("foodfact")]
-        public async Task<IActionResult> GetFoodFact()
+public async Task<IActionResult> GetFoodFact()
+{
+    try
+    {
+        var apiKey = _config["Spoonacular:ApiKey"];
+
+        if (string.IsNullOrEmpty(apiKey))
+            return StatusCode(500, "Spoonacular API key missing");
+
+        var url = $"https://api.spoonacular.com/food/trivia/random?apiKey={apiKey}";
+
+        var response = await _httpClient.GetAsync(url);
+        var content = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
         {
-            var apiKey = _config["Spoonacular:ApiKey"];
-            var url = $"https://api.spoonacular.com/food/trivia/random?apiKey={apiKey}";
-
-            var result = await _httpClient.GetStringAsync(url);
-
-            return Content(result, "application/json");
+            return StatusCode((int)response.StatusCode, content);
         }
+
+        return Content(content, "application/json");
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, ex.Message);
+    }
+}
+
 
         // GET: /api/ai/foodnews
         [HttpGet("foodnews")]
