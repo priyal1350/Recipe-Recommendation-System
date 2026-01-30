@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react"; // ✅ added useCallback
+zimport { useEffect, useState, useCallback } from "react"; // ✅ added useCallback
 import api from "../api";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "../layouts/AppLayout";
@@ -19,11 +19,16 @@ export default function FilteredRecipes() {
       const params = new URLSearchParams();
       params.append("query", "healthy");
 
-      if (diet) params.append("diet", diet);
-      if (maxCalories) params.append("maxCalories", maxCalories);
-      if (minProtein) params.append("minProtein", minProtein);
+    const res = await api.get(`/external/recipes/search?${params.toString()}`);
 
-      const res = await api.get(`/external/recipes/search?${params.toString()}`);
+    setRecipes(res.data.results || []);
+  } catch (err) {
+    console.error("❌ Failed to load filtered recipes:", err.response?.data || err.message);
+    alert("Failed to load recipes ❌");
+  } finally {
+    setLoading(false);
+  }
+}, [diet, maxCalories, minProtein]); // ✅ dependencies added
 
       setRecipes(res.data.results || []);
     } catch (err) {
