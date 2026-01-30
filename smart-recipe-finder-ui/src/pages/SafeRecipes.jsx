@@ -3,6 +3,12 @@ import { useNavigate } from "react-router-dom";
 import api from "../api";
 import AppLayout from "../layouts/AppLayout";
 
+// ✅ Move outside component (IMPORTANT FIX)
+const defaultFoods = [
+  "paneer", "salad", "dal", "smoothie",
+  "chicken", "rice", "tofu", "oats", "eggs"
+];
+
 export default function SafeSearchRecipes() {
   const navigate = useNavigate();
 
@@ -15,11 +21,6 @@ export default function SafeSearchRecipes() {
   const [error, setError] = useState("");
   const [showUnsafe, setShowUnsafe] = useState(false);
 
-  const defaultFoods = [
-    "paneer", "salad", "dal", "smoothie",
-    "chicken", "rice", "tofu", "oats", "eggs"
-  ];
-
   // 🛡️ SAFE SEARCH API
   const safeSearch = useCallback(async (searchTerm) => {
     if (!searchTerm?.trim()) return;
@@ -29,7 +30,6 @@ export default function SafeSearchRecipes() {
       setError("");
 
       const encoded = encodeURIComponent(searchTerm);
-
       const res = await api.get(`/recipes/safe-search?query=${encoded}`);
 
       setSafeRecipes(res.data.safeRecipes || []);
@@ -53,7 +53,7 @@ export default function SafeSearchRecipes() {
   useEffect(() => {
     const randomFood = defaultFoods[Math.floor(Math.random() * defaultFoods.length)];
     safeSearch(randomFood);
-  }, [safeSearch]);
+  }, [safeSearch]); // ✅ ESLint fixed
 
   // 🧪 Nutrition fetch
   const getNutrition = async (recipeId) => {
@@ -98,7 +98,7 @@ export default function SafeSearchRecipes() {
         {error && <p style={styles.error}>{error}</p>}
         {loading && <p>⏳ Loading...</p>}
 
-        {/* ✅ SAFE RECIPES */}
+        {/* SAFE RECIPES */}
         <h3 style={{ color: "green" }}>✅ Safe Recipes</h3>
 
         {safeRecipes.length === 0 && !loading && (
@@ -139,7 +139,7 @@ export default function SafeSearchRecipes() {
           ))}
         </div>
 
-        {/* ⚠️ UNSAFE RECIPES TOGGLE */}
+        {/* UNSAFE RECIPES */}
         {unsafeRecipes.length > 0 && (
           <div style={{ marginTop: "30px" }}>
             <button
@@ -180,7 +180,7 @@ export default function SafeSearchRecipes() {
           </div>
         )}
 
-        {/* 🧪 POPUP */}
+        {/* POPUP */}
         {showPopup && (
           <div style={styles.popupOverlay} onClick={() => setShowPopup(false)}>
             <div style={styles.popup} onClick={(e) => e.stopPropagation()}>
@@ -201,6 +201,7 @@ export default function SafeSearchRecipes() {
     </AppLayout>
   );
 }
+
 
 const styles = {
   wrapper: { padding: "20px", maxWidth: "1200px", margin: "auto" },

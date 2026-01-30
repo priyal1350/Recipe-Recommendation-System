@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { authApi } from "../services/api"; // ✅ use authApi
+import { authApi } from "../services/api";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -8,19 +8,20 @@ export default function Register() {
   const [form, setForm] = useState({
     name: "",
     email: "",
-    passwordHash: "", // must match backend DTO
+    passwordHash: "",
     dietPreference: "",
     ageGroup: ""
   });
 
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const handleChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  }, []);
 
   const register = async () => {
-    if (!form.name || !form.email || !form.passwordHash) {
+    if (!form.name.trim() || !form.email.trim() || !form.passwordHash.trim()) {
       alert("Please fill all required fields");
       return;
     }
@@ -28,8 +29,7 @@ export default function Register() {
     try {
       setLoading(true);
 
-      // ✅ Call Spring Boot Auth API (Azure)
-      const res = await authApi.post("/auth/register", form);
+      await authApi.post("/auth/register", form);
 
       alert("Registration successful 🎉");
       navigate("/login");
@@ -97,7 +97,11 @@ export default function Register() {
           <option value="50+">50+</option>
         </select>
 
-        <button onClick={register} style={styles.button} disabled={loading}>
+        <button
+          onClick={register}
+          style={styles.button}
+          disabled={loading}
+        >
           {loading ? "Registering..." : "Register"}
         </button>
 
@@ -108,6 +112,7 @@ export default function Register() {
     </div>
   );
 }
+
 
 const styles = {
   page: {
