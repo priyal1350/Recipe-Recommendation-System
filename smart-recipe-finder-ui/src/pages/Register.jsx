@@ -9,10 +9,12 @@ export default function Register() {
     name: "",
     email: "",
     passwordHash: "",
+    confirmPassword: "",
     dietPreference: "",
     ageGroup: ""
   });
 
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
   const handleChange = useCallback((e) => {
@@ -20,16 +22,71 @@ export default function Register() {
     setForm((prev) => ({ ...prev, [name]: value }));
   }, []);
 
-  const register = async () => {
-    if (!form.name.trim() || !form.email.trim() || !form.passwordHash.trim()) {
-      alert("Please fill all required fields");
-      return;
+  // ✅ Validation Function
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Name validation
+    if (!form.name.trim()) {
+      newErrors.name = "Name is required";
+    } else if (form.name.length < 3) {
+      newErrors.name = "Name must be at least 3 characters";
     }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!form.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!emailRegex.test(form.email)) {
+      newErrors.email = "Invalid email format";
+    }
+
+    // Password validation
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+    if (!form.passwordHash) {
+      newErrors.passwordHash = "Password is required";
+    } else if (!passwordRegex.test(form.passwordHash)) {
+      newErrors.passwordHash =
+        "Password must be 8+ chars, uppercase, lowercase, number & special character";
+    }
+
+    // Confirm password validation
+    if (!form.confirmPassword) {
+      newErrors.confirmPassword = "Confirm password is required";
+    } else if (form.passwordHash !== form.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
+    }
+
+    // Dropdown validation
+    if (!form.dietPreference) {
+      newErrors.dietPreference = "Please select diet preference";
+    }
+
+    if (!form.ageGroup) {
+      newErrors.ageGroup = "Please select age group";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const register = async () => {
+    if (!validateForm()) return;
 
     try {
       setLoading(true);
 
-      await authApi.post("/auth/register", form);
+      const payload = {
+        name: form.name,
+        email: form.email,
+        passwordHash: form.passwordHash,
+        dietPreference: form.dietPreference,
+        ageGroup: form.ageGroup
+      };
+
+      await authApi.post("/auth/register", payload);
 
       alert("Registration successful 🎉");
       navigate("/login");
@@ -53,6 +110,7 @@ export default function Register() {
           onChange={handleChange}
           style={styles.input}
         />
+        {errors.name && <p style={styles.error}>{errors.name}</p>}
 
         <input
           name="email"
@@ -62,6 +120,7 @@ export default function Register() {
           onChange={handleChange}
           style={styles.input}
         />
+        {errors.email && <p style={styles.error}>{errors.email}</p>}
 
         <input
           name="passwordHash"
@@ -71,6 +130,20 @@ export default function Register() {
           onChange={handleChange}
           style={styles.input}
         />
+        {errors.passwordHash && <p style={styles.error}>{errors.passwordHash}</p>}
+
+        {/* ✅ Confirm Password */}
+        <input
+          name="confirmPassword"
+          type="password"
+          placeholder="Confirm Password"
+          value={form.confirmPassword}
+          onChange={handleChange}
+          style={styles.input}
+        />
+        {errors.confirmPassword && (
+          <p style={styles.error}>{errors.confirmPassword}</p>
+        )}
 
         <select
           name="dietPreference"
@@ -83,6 +156,9 @@ export default function Register() {
           <option value="nonveg">🍗 Non-Vegetarian</option>
           <option value="vegan">🥗 Vegan</option>
         </select>
+        {errors.dietPreference && (
+          <p style={styles.error}>{errors.dietPreference}</p>
+        )}
 
         <select
           name="ageGroup"
@@ -96,12 +172,9 @@ export default function Register() {
           <option value="36-50">36-50</option>
           <option value="50+">50+</option>
         </select>
+        {errors.ageGroup && <p style={styles.error}>{errors.ageGroup}</p>}
 
-        <button
-          onClick={register}
-          style={styles.button}
-          disabled={loading}
-        >
+        <button onClick={register} style={styles.button} disabled={loading}>
           {loading ? "Registering..." : "Register"}
         </button>
 
@@ -112,7 +185,6 @@ export default function Register() {
     </div>
   );
 }
-
 
 const styles = {
   page: {
@@ -136,9 +208,14 @@ const styles = {
   input: {
     width: "100%",
     padding: "10px",
-    marginBottom: "12px",
+    marginBottom: "6px",
     borderRadius: "6px",
     border: "1px solid #ccc"
+  },
+  error: {
+    color: "red",
+    fontSize: "12px",
+    marginBottom: "10px"
   },
   button: {
     width: "100%",
