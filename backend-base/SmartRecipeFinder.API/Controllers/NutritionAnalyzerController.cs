@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using System.Net.Http;
+using SmartRecipeFinder.API.Models.DTOs;
 using System.Text;
 
 namespace SmartRecipeFinder.API.Controllers
@@ -16,22 +16,24 @@ namespace SmartRecipeFinder.API.Controllers
         }
 
         [HttpPost("analyze")]
-        public async Task<IActionResult> Analyze([FromBody] string food)
+        public async Task<IActionResult> Analyze([FromBody] NutritionRequest request)
         {
+            if (request == null || string.IsNullOrEmpty(request.Food))
+            {
+                return BadRequest("Food is required");
+            }
+
             var apiKey = _config["Spoonacular:ApiKey"];
 
             var url = $"https://api.spoonacular.com/recipes/parseIngredients?includeNutrition=true&apiKey={apiKey}";
 
-            var formData = $"ingredientList=1 {food}&servings=1";
+            var formData = $"ingredientList={request.Food}&servings=1";
 
             using var client = new HttpClient();
             var content = new StringContent(formData, Encoding.UTF8, "application/x-www-form-urlencoded");
 
             var response = await client.PostAsync(url, content);
             var raw = await response.Content.ReadAsStringAsync();
-
-            Console.WriteLine("SPOONACULAR RESPONSE:");
-            Console.WriteLine(raw);
 
             if (!response.IsSuccessStatusCode)
                 return BadRequest(raw);
