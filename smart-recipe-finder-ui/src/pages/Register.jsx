@@ -1,8 +1,6 @@
 import { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
-
-const AUTH_API = "http://localhost:8081/api/auth"; // ✅ Spring Boot API
+import { authApi } from "../services/api"; // ✅ use authApi
 
 export default function Register() {
   const navigate = useNavigate();
@@ -10,7 +8,7 @@ export default function Register() {
   const [form, setForm] = useState({
     name: "",
     email: "",
-    passwordHash: "", // ✅ MUST match backend field
+    passwordHash: "", // must match backend DTO
     dietPreference: "",
     ageGroup: ""
   });
@@ -22,19 +20,16 @@ export default function Register() {
   };
 
   const register = async () => {
-    console.log("Register payload:", form); // ✅ debug
-
     if (!form.name || !form.email || !form.passwordHash) {
-      alert("Please fill all fields");
+      alert("Please fill all required fields");
       return;
     }
 
     try {
       setLoading(true);
 
-      const res = await axios.post(`${AUTH_API}/register`, form, {
-        headers: { "Content-Type": "application/json" }
-      });
+      // ✅ Call Spring Boot Auth API (Azure)
+      const res = await authApi.post("/auth/register", form);
 
       alert("Registration successful 🎉");
       navigate("/login");
@@ -68,7 +63,6 @@ export default function Register() {
           style={styles.input}
         />
 
-        {/* ✅ FIXED: name MUST be passwordHash */}
         <input
           name="passwordHash"
           type="password"
@@ -87,6 +81,7 @@ export default function Register() {
           <option value="">Select Diet</option>
           <option value="veg">🌱 Vegetarian</option>
           <option value="nonveg">🍗 Non-Vegetarian</option>
+          <option value="vegan">🥗 Vegan</option>
         </select>
 
         <select

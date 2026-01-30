@@ -1,30 +1,37 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../api"; // ✅ use JWT axios instance
+import { useNavigate } from "react-router-dom";
 import AppLayout from "../layouts/AppLayout";
-
-const API_BASE = "https://localhost:7060/api";
 
 export default function FilteredRecipes() {
   const [recipes, setRecipes] = useState([]);
   const [diet, setDiet] = useState("");
   const [maxCalories, setMaxCalories] = useState("");
   const [minProtein, setMinProtein] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const navigate = useNavigate();
 
   const loadRecipes = async () => {
     try {
-      let url = `${API_BASE}/external/recipes/search?query=`;
+      setLoading(true);
 
-      if (diet) url += `&diet=${diet}`;
-      if (maxCalories) url += `&maxCalories=${maxCalories}`;
-      if (minProtein) url += `&minProtein=${minProtein}`;
+      const params = new URLSearchParams();
 
-      const res = await axios.get(url);
+      params.append("query", "healthy"); // ✅ default query
+
+      if (diet) params.append("diet", diet);
+      if (maxCalories) params.append("maxCalories", maxCalories);
+      if (minProtein) params.append("minProtein", minProtein);
+
+      const res = await api.get(`/external/recipes/search?${params.toString()}`);
+
       setRecipes(res.data.results || []);
     } catch (err) {
-      console.error(
-        "Failed to load filtered recipes:",
-        err.response?.data || err.message
-      );
+      console.error("❌ Failed to load filtered recipes:", err.response?.data || err.message);
+      alert("Failed to load recipes ❌");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -46,30 +53,39 @@ export default function FilteredRecipes() {
             <option value="nonveg">🍗 Non-Veg</option>
           </select>
 
-          <select
-            style={styles.select}
-            onChange={(e) => setMaxCalories(e.target.value)}
-          >
+          <select style={styles.select} onChange={(e) => setMaxCalories(e.target.value)}>
             <option value="">Calories</option>
             <option value="400">Under 400</option>
             <option value="600">Under 600</option>
+            <option value="800">Under 800</option>
           </select>
 
-          <select
-            style={styles.select}
-            onChange={(e) => setMinProtein(e.target.value)}
-          >
+          <select style={styles.select} onChange={(e) => setMinProtein(e.target.value)}>
             <option value="">Protein</option>
+            <option value="10">Medium Protein</option>
             <option value="20">High Protein</option>
+            <option value="30">Very High Protein</option>
           </select>
         </div>
+
+        {/* Loading */}
+        {loading && <p style={styles.loading}>⏳ Loading recipes...</p>}
+
+        {/* Empty State */}
+        {!loading && recipes.length === 0 && (
+          <p style={styles.empty}>No recipes found 😔</p>
+        )}
 
         {/* Recipes */}
         <div style={styles.grid}>
           {recipes.map((recipe) => (
-            <div key={recipe.id} style={styles.card}>
+            <div
+              key={recipe.id}
+              style={styles.card}
+              onClick={() => navigate(`/recipe/${recipe.id}`)}
+            >
               <img
-                src={recipe.image}
+                src={recipe.image || "https://via.placeholder.com/300"}
                 alt={recipe.title}
                 style={styles.image}
               />
@@ -94,6 +110,17 @@ const styles = {
 
   title: {
     marginBottom: "20px",
+    fontSize: "22px",
+  },
+
+  loading: {
+    textAlign: "center",
+    color: "#667eea",
+  },
+
+  empty: {
+    textAlign: "center",
+    color: "#777",
   },
 
   filters: {
@@ -104,10 +131,11 @@ const styles = {
   },
 
   select: {
-    padding: "10px",
+    padding: "10px 12px",
     borderRadius: "8px",
     border: "1px solid #ccc",
     cursor: "pointer",
+    fontSize: "14px",
   },
 
   grid: {
@@ -121,6 +149,8 @@ const styles = {
     padding: "10px",
     borderRadius: "12px",
     boxShadow: "0 8px 18px rgba(0,0,0,0.12)",
+    cursor: "pointer",
+    transition: "transform 0.2s ease",
   },
 
   image: {
@@ -131,5 +161,6 @@ const styles = {
 
   recipeTitle: {
     fontSize: "14px",
+    fontWeight: "500",
   },
 };

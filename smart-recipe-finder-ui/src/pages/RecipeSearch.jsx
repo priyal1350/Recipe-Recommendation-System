@@ -1,76 +1,102 @@
 import { useState } from "react";
-import api from "../api"; // ✅ JWT axios instance
+import { recipeApi } from "../services/api"; // ✅ .NET API
 
 export default function RecipeSearch() {
-  const [name, setName] = useState("");
+  const [query, setQuery] = useState("");
   const [recipes, setRecipes] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // 🔍 Search recipes
+  // 🔍 Search recipes (Safe Search API)
   const search = async () => {
-    try {
-      const res = await api.get(`/external/recipes/search?query=${name}`);
-      setRecipes(res.data.results || []);
-    } catch (err) {
-      console.error("Search failed:", err.response?.data || err.message);
-      alert("Failed to search recipes ❌");
-    }
-  };
+  if (!query) {
+    alert("Please enter recipe name");
+    return;
+  }
 
-  // ❤️ Add to favorites (JWT-based)
-  const addFavorite = async (recipeId) => {
-    try {
-      await api.post(`/user/addFavorite?recipeId=${recipeId}`);
-      alert("Added to favorites ❤️");
-    } catch (err) {
-      console.error("Add favorite failed:", err.response?.data || err.message);
-      alert("Failed to add favorite ❌");
-    }
-  };
+  try {
+    setLoading(true);
 
-  // 🧪 Get nutrition info
-  const getNutrition = async (recipeId) => {
+    const res = await recipeApi.get(`/recipes/safe-search?query=${query}`);
+
+    const safe = res.data.safeRecipes || [];
+    const unsafe = res.data.unsafeRecipes || [];
+
+    const allRecipes = [
+      ...safe.map(r => ({ ...r, safe: true })),
+      ...unsafe.map(r => ({ ...r, safe: false }))
+    ];
+
+    setRecipes(allRecipes);
+  } catch (err) {
+    console.error("Search failed:", err.response?.data || err.message);
+    alert("Failed to search recipes ❌");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+  // 📄 Get recipe details
+  const viewDetails = async (id) => {
     try {
-      const res = await api.get(`/external/recipes/${recipeId}/nutrition`);
+      const res = await recipeApi.get(`/recipes/${id}`);
       alert(JSON.stringify(res.data, null, 2));
     } catch (err) {
-      console.error("Nutrition failed:", err.response?.data || err.message);
-      alert("Failed to get nutrition ❌");
-    }
-  };
-
-  // 🛒 Generate shopping list (JWT-based)
-  const generateShoppingList = async (recipeId) => {
-    try {
-      await api.post(`/shopping/generate?recipeId=${recipeId}`);
-      alert("Shopping list generated 🛒");
-    } catch (err) {
-      console.error("Shopping list failed:", err.response?.data || err.message);
-      alert("Failed to generate shopping list ❌");
+      console.error("Details failed:", err.response?.data || err.message);
+      alert("Failed to fetch recipe details ❌");
     }
   };
 
   return (
-    <div>
-      <h2>Recipe Search</h2>
+    <div style={{ padding: "20px" }}>
+      <h2>🍽️ Recipe Search</h2>
 
-      <input
-        placeholder="Search recipe"
-        onChange={e => setName(e.target.value)}
-      />
-      <button onClick={search}>Search</button>
+      <div style={{ marginBottom: "15px" }}>
+        <input
+          placeholder="Search recipe (e.g. pasta)"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          style={{ padding: "10px", width: "250px", marginRight: "10px" }}
+        />
+        <button onClick={search} disabled={loading}>
+          {loading ? "Searching..." : "Search"}
+        </button>
+      </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", marginTop: "20px" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
         {recipes.map(r => (
           <div
             key={r.id}
-            style={{ border: "1px solid #ccc", padding: "10px", width: "250px", borderRadius: "10px" }}
+            style={{
+              border: "1px solid #ccc",
+              padding: "10px",
+              width: "260px",
+              borderRadius: "12px",
+              background: r.safe ? "#e8fff0" : "#ffe8e8"
+            }}
           >
-            <img src={r.image} alt={r.title} width="100%" style={{ borderRadius: "10px" }} />
+            <img
+              src={r.image}
+              alt={r.title}
+              width="100%"
+              style={{ borderRadius: "10px" }}
+            />
+
             <h4>{r.title}</h4>
 
-            <button onClick={() => addFavorite(r.id)}>❤️ Favorite</button>
-            <button onClick={() => getNutrition(r.id)}>🧪 Nutrition</button>
-            <button onClick={() => generateShoppingList(r.id)}>🛒 Shopping List</button>
+            <p style={{ fontSize: "13px", fontWeight: "bold" }}>
+              {r.safe ? "✅ Safe Recipe" : "⚠️ Unsafe (Allergy Risk)"}
+            </p>
+
+            {!r.safe && r.dangerIngredients && (
+              <p style={{ color: "red", fontSize: "12px" }}>
+                Danger: {r.dangerIngredients.join(", ")}
+              </p>
+            )}
+
+            <button onClick={() => viewDetails(r.id)}>
+              📄 View Details
+            </button>
           </div>
         ))}
       </div>

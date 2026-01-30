@@ -1,13 +1,12 @@
 import { useState } from "react";
-import axios from "axios";
+import api from "../api"; // ✅ JWT axios instance
 import AppLayout from "../layouts/AppLayout";
-
-const API_BASE = "https://localhost:7060/api";
 
 export default function NutritionAnalyzer() {
   const [food, setFood] = useState("");
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const analyze = async () => {
     if (!food.trim()) {
@@ -17,25 +16,31 @@ export default function NutritionAnalyzer() {
 
     try {
       setLoading(true);
+      setError("");
 
       const formatted = food
-        .split("and")
-        .map((x) => x.trim())
-        .join("\n");
+  .split(/and|,|&/i) // supports and , &
+  .map(x => x.trim())
+  .filter(x => x.length > 0)
+  .join("\n");
 
-      const res = await axios.post(
-        `${API_BASE}/nutrition/analyze`,
-        formatted,
-        { headers: { "Content-Type": "application/json" } }
-      );
 
-      setResult(res.data);
+      // ✅ Send JSON (safe for backend)
+      const res = await api.post("/nutrition/analyze", {
+        food: formatted,
+      });
+
+      setResult(res.data || []);
     } catch (err) {
-      console.error(
-        "Nutrition failed:",
-        err.response?.data || err.message
-      );
-      alert("Nutrition info failed ❌");
+      console.error("❌ Nutrition failed:", err.response?.data || err.message);
+
+      if (err.response?.status === 401) {
+        alert("Session expired. Please login again.");
+        localStorage.clear();
+        window.location.href = "/login";
+      } else {
+        setError("Failed to analyze nutrition ❌");
+      }
     } finally {
       setLoading(false);
     }
@@ -59,19 +64,18 @@ export default function NutritionAnalyzer() {
               style={styles.input}
             />
 
-            <button onClick={analyze} style={styles.button}>
+            <button onClick={analyze} style={styles.button} disabled={loading}>
               {loading ? "Analyzing..." : "Analyze"}
             </button>
           </div>
 
-          {loading && (
-            <p style={styles.loading}>⏳ Fetching nutrition...</p>
-          )}
+          {loading && <p style={styles.loading}>⏳ Fetching nutrition...</p>}
+          {error && <p style={styles.error}>{error}</p>}
 
-          {result && (
+          {result.length > 0 && (
             <div style={styles.results}>
-              {result.map((item) => (
-                <div key={item.id} style={styles.foodCard}>
+              {result.map((item, index) => (
+                <div key={index} style={styles.foodCard}>
                   <h3 style={styles.foodTitle}>{item.name}</h3>
 
                   {item.nutrition?.nutrients
@@ -88,6 +92,10 @@ export default function NutritionAnalyzer() {
                 </div>
               ))}
             </div>
+          )}
+
+          {!loading && result.length === 0 && !error && (
+            <p style={styles.empty}>No nutrition data yet 🥗</p>
           )}
         </div>
       </div>
@@ -146,6 +154,16 @@ const styles = {
   loading: {
     marginTop: "12px",
     color: "#667eea",
+  },
+
+  error: {
+    marginTop: "12px",
+    color: "red",
+  },
+
+  empty: {
+    marginTop: "15px",
+    color: "#777",
   },
 
   results: {

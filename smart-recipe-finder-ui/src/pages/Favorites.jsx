@@ -1,46 +1,52 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../api"; // ✅ JWT axios instance
+import api from "../api"; 
 import AppLayout from "../layouts/AppLayout";
 
 export default function Favorites() {
   const [recipes, setRecipes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   const fetchFavorites = useCallback(async () => {
-  try {
-    const res = await api.get("/user/favorites");
+    try {
+      setLoading(true);
 
-    console.log("Favorites from backend:", res.data);
+      const res = await api.get("/user/favorites");
 
-    // ✅ Backend already returns full recipes
-    setRecipes(res.data || []);
-  } catch (err) {
-    console.error(
-      "Favorites load failed:",
-      err.response?.data || err.message
-    );
-  }
-}, []);
+      console.log("✅ Favorites from backend:", res.data);
 
+      setRecipes(res.data || []);
+    } catch (err) {
+      console.error("❌ Favorites load failed:", err.response?.data || err.message);
+
+      // 🔥 If token expired → logout
+      if (err.response?.status === 401) {
+        alert("Session expired. Please login again.");
+        localStorage.clear();
+        navigate("/login");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [navigate]);
 
   useEffect(() => {
     fetchFavorites();
   }, [fetchFavorites]);
 
-  const removeFavorite = async (recipeId) => {
+  const removeFavorite = async (recipe) => {
+    const recipeId = recipe.id || recipe.recipeId; // ✅ handle both cases
+
     try {
-      // ✅ Correct API path
       await api.delete(`/user/removeFavorite?recipeId=${recipeId}`);
 
       setRecipes((prev) =>
-        prev.filter((item) => item.id !== recipeId)
+        prev.filter((item) => (item.id || item.recipeId) !== recipeId)
       );
     } catch (err) {
-      console.error(
-        "Remove favorite failed:",
-        err.response?.data || err.message
-      );
+      console.error("❌ Remove favorite failed:", err.response?.data || err.message);
+      alert("Failed to remove favorite ❌");
     }
   };
 
@@ -49,36 +55,42 @@ export default function Favorites() {
       <div style={styles.wrapper}>
         <h2 style={styles.title}>❤️ Your Favorite Recipes</h2>
 
-        {recipes.length === 0 && (
-          <p style={styles.empty}>No favorites yet</p>
+        {loading && <p style={styles.loading}>Loading favorites...</p>}
+
+        {!loading && recipes.length === 0 && (
+          <p style={styles.empty}>No favorites yet 😔</p>
         )}
 
         <div style={styles.grid}>
-          {recipes.map((r) => (
-            <div
-              key={r.id}
-              style={styles.card}
-              onClick={() => navigate(`/recipe/${r.id}`)}
-            >
-              <img
-                src={r.image}
-                alt={r.title}
-                style={styles.image}
-              />
+          {recipes.map((r) => {
+            const recipeId = r.id || r.recipeId;
 
-              <h4 style={styles.recipeTitle}>{r.title}</h4>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeFavorite(r.id);
-                }}
-                style={styles.removeBtn}
+            return (
+              <div
+                key={recipeId}
+                style={styles.card}
+                onClick={() => navigate(`/recipe/${recipeId}`)}
               >
-                ❌
-              </button>
-            </div>
-          ))}
+                <img
+                  src={r.image || "https://via.placeholder.com/300"}
+                  alt={r.title}
+                  style={styles.image}
+                />
+
+                <h4 style={styles.recipeTitle}>{r.title}</h4>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeFavorite(r);
+                  }}
+                  style={styles.removeBtn}
+                >
+                  ❌
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
     </AppLayout>
@@ -97,6 +109,12 @@ const styles = {
 
   title: {
     marginBottom: "20px",
+    fontSize: "22px",
+  },
+
+  loading: {
+    textAlign: "center",
+    color: "#667eea",
   },
 
   empty: {

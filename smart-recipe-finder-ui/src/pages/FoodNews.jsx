@@ -1,43 +1,76 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../api"; // ✅ JWT axios instance
 import AppLayout from "../layouts/AppLayout";
 
 export default function FoodNews() {
   const [news, setNews] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const loadNews = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const res = await api.get("/ai/foodnews");
+
+      setNews(res.data.articles || []);
+    } catch (err) {
+      console.error("❌ News fetch failed:", err.response?.data || err.message);
+      setError("Failed to load food news 😔");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    axios.get("https://localhost:7060/api/ai/foodnews")
-      .then(res => setNews(res.data.articles || []))
-      .catch(err => console.error("News fetch failed:", err));
+    loadNews();
   }, []);
 
   return (
     <AppLayout>
       <div style={styles.wrapper}>
-        <h1>📰 Latest Food & Health News</h1>
+        <h1 style={styles.title}>📰 Latest Food & Health News</h1>
 
-        {news.length === 0 && <p>No news available right now.</p>}
+        {/* Loading */}
+        {loading && <p style={styles.loading}>⏳ Loading latest news...</p>}
 
-        {news.map((article, index) => (
-          <div key={index} style={styles.card}>
-            {article.urlToImage && (
-              <img
-                src={article.urlToImage}
-                alt={article.title}
-                style={styles.image}
-              />
-            )}
+        {/* Error */}
+        {error && <p style={styles.error}>{error}</p>}
 
-            <div>
-              <h3>{article.title}</h3>
-              <p>{article.description}</p>
+        {/* Empty */}
+        {!loading && !error && news.length === 0 && (
+          <p style={styles.empty}>No news available right now 🥲</p>
+        )}
 
-              <a href={article.url} target="_blank" rel="noreferrer">
-                Read full article →
-              </a>
+        {/* News List */}
+        <div style={styles.list}>
+          {news.map((article, index) => (
+            <div key={index} style={styles.card}>
+              {article.urlToImage && (
+                <img
+                  src={article.urlToImage}
+                  alt={article.title}
+                  style={styles.image}
+                />
+              )}
+
+              <div style={styles.content}>
+                <h3 style={styles.newsTitle}>{article.title}</h3>
+                <p style={styles.desc}>{article.description}</p>
+
+                <a
+                  href={article.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={styles.link}
+                >
+                  Read full article →
+                </a>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </AppLayout>
   );
@@ -46,22 +79,77 @@ export default function FoodNews() {
 const styles = {
   wrapper: {
     padding: "30px",
-    maxWidth: "900px",
-    margin: "auto"
+    maxWidth: "1000px",
+    margin: "auto",
+    background: "#fff",
+    borderRadius: "14px",
+    boxShadow: "0 15px 35px rgba(0,0,0,0.15)",
   },
+
+  title: {
+    marginBottom: "20px",
+    fontSize: "26px",
+  },
+
+  loading: {
+    textAlign: "center",
+    color: "#667eea",
+    fontSize: "15px",
+  },
+
+  error: {
+    textAlign: "center",
+    color: "red",
+    fontSize: "15px",
+  },
+
+  empty: {
+    textAlign: "center",
+    color: "#777",
+  },
+
+  list: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "18px",
+  },
+
   card: {
     display: "flex",
     gap: "15px",
-    marginBottom: "20px",
     background: "#fff",
     padding: "15px",
     borderRadius: "12px",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.05)"
+    boxShadow: "0 8px 18px rgba(0,0,0,0.12)",
+    transition: "transform 0.15s ease",
   },
+
   image: {
-    width: "140px",
-    height: "90px",
+    width: "160px",
+    height: "100px",
     objectFit: "cover",
-    borderRadius: "8px"
-  }
+    borderRadius: "10px",
+  },
+
+  content: {
+    flex: 1,
+  },
+
+  newsTitle: {
+    marginBottom: "6px",
+    fontSize: "17px",
+  },
+
+  desc: {
+    fontSize: "14px",
+    color: "#555",
+    marginBottom: "8px",
+  },
+
+  link: {
+    fontSize: "14px",
+    color: "#667eea",
+    fontWeight: "bold",
+    textDecoration: "none",
+  },
 };
