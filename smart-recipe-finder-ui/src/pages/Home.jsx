@@ -33,7 +33,7 @@ export default function Home() {
     <AppLayout>
       <div style={styles.wrapper}>
         <div style={styles.hero}>
-          <h1 style={styles.header}>🍲 Smart Recipe Finder</h1>
+          <h1 style={styles.header}>🍲 FlavorQuest</h1>
           <p style={{ fontSize: "14px", color: "#444" }}>
             👋 Welcome, <b>{userName}</b>
           </p>
