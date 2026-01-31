@@ -47,7 +47,7 @@ export default function Login() {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <h2 style={styles.title}>🍲 Smart Recipe Finder</h2>
+        <h2 style={styles.title}>🍲 FlavorQuest</h2>
         <p style={styles.subtitle}>Login to continue</p>
 
         <input
