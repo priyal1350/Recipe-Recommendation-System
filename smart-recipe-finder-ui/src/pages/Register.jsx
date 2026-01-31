@@ -192,6 +192,7 @@ const styles = {
     background: "#f4f6fa",
     display: "flex",
     justifyContent: "center",
+     background: "linear-gradient(135deg, #667eea, #764ba2)",
     alignItems: "center"
   },
   card: {
